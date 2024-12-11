@@ -1,0 +1,2 @@
+- run the server with dotnet run 
+- now you can call api 
