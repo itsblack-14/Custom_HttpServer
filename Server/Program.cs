@@ -21,7 +21,7 @@ class Server
             new Users{ Id = "2", Name = "Jane Smith" }
         };
 
-        int port = 5100; // Define the port to listen on
+        int port = 8080; // Define the port to listen on
         TcpListener listener = new TcpListener(IPAddress.Any, port);
 
         try
@@ -52,6 +52,13 @@ class Server
                         string method = requestParts[0]; // HTTP method 
                         string url = requestParts[1];    // URL path
 
+                        string body = "";
+                        int emptyLineIndex = Array.IndexOf(requestLines, "");
+                        if (emptyLineIndex >= 0 && emptyLineIndex < requestLines.Length - 1)
+                        {
+                            body = string.Join("\r\n", requestLines[(emptyLineIndex + 1)..]);
+                        }
+
                         // Handle routes
                         string responseBody;
                         int statusCode = 200; // Default to 200 OK
@@ -62,7 +69,6 @@ class Server
                         }
                         else if (url.StartsWith("/api/users/") && method == "GET")
                         {
-                            // Example for getting a single user by ID
                             string id = url.Replace("/api/users/", "");
                             var user = users.FirstOrDefault(x => x.Id == id);
 
@@ -74,6 +80,30 @@ class Server
                             {
                                 statusCode = 404;
                                 responseBody = System.Text.Json.JsonSerializer.Serialize(new { Error = "User Not Found" } );
+                            }
+                        }
+                        else if (url.StartsWith("/api/users/") && method == "POST" )
+                        {
+                            try
+                            {
+                                // Parse the incoming JSON body
+                                var newUser = System.Text.Json.JsonSerializer.Deserialize<Users>(body);
+
+                                if (newUser != null)
+                                {
+                                    users.Add(newUser);
+                                    responseBody = System.Text.Json.JsonSerializer.Serialize(newUser);
+                                }
+                                else
+                                {
+                                    statusCode = 400; // Bad Request
+                                    responseBody = System.Text.Json.JsonSerializer.Serialize(new { Error = "Invalid User Data" });
+                                }
+                            }
+                            catch
+                            {
+                                statusCode = 400; // Bad Request
+                                responseBody = System.Text.Json.JsonSerializer.Serialize(new { Error = "Malformed JSON" });
                             }
                         }
                         else
